@@ -1,0 +1,7 @@
+ARG_ENABLE('gmssl', 'gmssl support', 'no');
+
+if (PHP_GMSSL != 'no') {
+	AC_DEFINE('HAVE_GMSSL', 1, 'gmssl support enabled');
+
+	EXTENSION('gmssl', 'gmssl.c', null, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
+}
