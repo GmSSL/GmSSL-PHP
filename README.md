@@ -1,9 +1,51 @@
 # GmSSL-PHP
 
+## Introduction
 The GmSSL extension is the binding to the GmSSL C library. GmSSL provides functions of Chinese SM2, SM3, SM4, SM9, ZUC crypto algorithms.
 
+## Installation
 
-GmSSL Functions
+To compile and install the GmSSL PHP extension, you need to install the GmSSL library (version >= 3.1.0). See the GmSSL INSTALL.md for more details.
+
+```bash
+$ cd GmSSL-PHP-master
+$ phpize
+$ ./configure
+$ make
+$ sudo make install
+```
+
+You can use `phpinfo()` to see if the GmSSL extension is correctly installed.
+
+```php
+<?php
+phpinfo();
+?>
+```
+
+## Predefined Constants
+
+* `GMSSL_PHP_VERSION (string)`
+* `GMSSL_LIBRARAY_VERSION (string)`
+* `GMSSL_SM3_DIGEST_SIZE (int)`
+* `GMSSL_SM3_HMAC_SIZE (int)`
+* `GMSSL_SM4_KEY_SIZE (int)`
+* `GMSSL_SM4_BLOCK_SIZE (int)`
+* `GMSSL_SM4_GCM_MIN_IV_SIZE (int)`
+* `GMSSL_SM4_GCM_MAX_IV_SIZE (int)`
+* `GMSSL_SM4_GCM_DEFAULT_IV_SIZE (int)`
+* `GMSSL_SM4_GCM_MAX_TAG_SIZE (int)`
+* `GMSSL_SM2_DEFAULT_ID (string)`
+* `GMSSL_SM2_MAX_SIGNATURE_SIZE (int)`
+* `GMSSL_SM2_MAX_PLAINTEXT_SIZE (int)`
+* `GMSSL_SM2_MAX_CIPHERTEXT_SIZE (int)`
+* `GMSSL_SM9_SIGNATURE_SIZE (int)`
+* `GMSSL_SM9_MAX_PLAINTEXT_SIZE (int)`
+* `GMSSL_SM9_MAX_CIPHERTEXT_SIZE (int)`
+* `GMSSL_ZUC_KEY_SIZE (int)`
+* `GMSSL_ZUC_IV_SIZE (int)`
+
+## GmSSL Functions
 
 * `gmssl_version_num` - Get version number of the GmSSL C library
 * `gmssl_version_str` - Get version string of the GmSSL C library
@@ -46,6 +88,5 @@ GmSSL Functions
 * `gmssl_sm9_enc_key_info_decrypt_from_pem` - Import user's SM9 encryption key from encrypted PEM file
 * `gmssl_sm9_encrypt` - Encrypt short message with recipient's ID
 * `gmssl_sm9_decrypt` - Decrypt SM9 ciphertext with user's SM9 private key
-
 
 
