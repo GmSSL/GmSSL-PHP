@@ -1,5 +1,6 @@
 *.lo
 *.la
+.DS_Store
 .libs
 acinclude.m4
 aclocal.m4
