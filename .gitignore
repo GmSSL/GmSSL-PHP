@@ -1,5 +1,6 @@
 *.lo
 *.la
+*.swp
 .DS_Store
 .libs
 acinclude.m4
