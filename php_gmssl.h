@@ -22,7 +22,7 @@
 extern zend_module_entry gmssl_module_entry;
 #define phpext_gmssl_ptr &gmssl_module_entry
 
-#define PHP_GMSSL_VERSION PHP_VERSION
+#define PHP_GMSSL_VERSION "1.0.0"
 
 #if defined(ZTS) && defined(COMPILE_DL_GMSSL)
 ZEND_TSRMLS_CACHE_EXTERN()
