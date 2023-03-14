@@ -36,6 +36,80 @@ print(GMSSL_PHP_VERSION."\n");
 php gmssl.php
 ```
 
+## Quick Start
+
+You can start GmSSL extension with the following simple examples of SM3, SM4 and SM2 crypto algorithms.
+
+### SM3 Examples
+
+SM3 is a cryptographic hash function with 256-bit output hash value.
+Compute the SM3 digest of the string "abc".
+
+```php
+<?php
+	$hash = gmssl_sm3("abc");
+	print(bin2hex($hash)."\n");
+?>
+```
+
+### SM4 Examples
+
+SM4 is a block cipher with 128-bit key length and 128-bit block size.
+Use SM4 to encrypt a block of message (16 bytes).
+
+```php
+<?php
+	$key = gmssl_rand_bytes(GMSSL_SM4_KEY_SIZE);
+	$block = gmssl_rand_bytes(GMSSL_SM4_BLOCK_SIZE);
+	$ciphertext = gmssl_sm4_encrypt($key, $block);
+	$plaintext = gmssl_sm4_decrypt($key, $ciphertext);
+
+	print(bin2hex($block)."\n");
+	print(bin2hex($plaintext)."\n");
+?>
+```
+
+The `gmssl_sm4_encrypt` and `gmssl_sm4_decrypt` functions export low-level API of SM4 block cipher.
+For the encryption of typical message, You can use SM4 with some encryption modes, such as CBC, CTR and GCM mode.
+The GCM mode is the recommended mode for non-expert users.
+
+```php
+<?php
+	$key = gmssl_rand_bytes(GMSSL_SM4_KEY_SIZE);
+	$iv = gmssl_rand_bytes(GMSSL_SM4_GCM_DEFAULT_ID_SIZE);
+	$aad = "Encoding: Text";
+	$message = "This is the secret text message.";
+
+	$ciphertext = gmssl_sm4_gcm_encrypt($key, $iv, $aad, $message, GMSSL_SM4_GCM_MAX_TAG_SIZE);
+	$plaintext = gmssl_sm4_gcm_decrypt($key, $iv, $aad, $ciphertext, GMSSL_SM4_GCM_MAX_TAG_SIZE);
+
+	print(bin2hex($message)."\n");
+	print(bin2hex($plaintext)."\n");
+?>
+```
+
+### SM2 Examples
+
+SM2 is the ellptic curve cryptogrphy standard of China. The standard includes the SM2 signature algorithm, the SM2 public key encryption algorithm and the recommended 256-bit SM2 domain parameters.
+Here is the example of SM2 key generation, signature generation/verification, and the SM2 public key encryption/decryption.
+
+```php
+<?php
+	$sm2_key = gmssl_sm2_key_generate();
+	$pass = "123456";
+	gmssl_sm2_private_key_info_encrypt_to_pem($sm2_key, $pass, "sm2.pem");
+	gmssl_sm2_public_key_info_to_pem($sm2_key, "sm2pub.pem");
+	$sm2_pub = gmssl_sm2_public_key_info_from_pem("sm2pub.pem");
+
+	$sig = gmssl_sm2_sign($sign_key, GMSSL_SM2_DEFAULT_ID, "To be signed message");
+	print(gmssl_sm2_verify($sm2_pub, GMSSL_SM2_DEFAULT_ID, "To be signed message", $sig)."\n");
+
+	$ciphertext = gmssl_sm2_encrypt($sm2_pub, "Secret key materials");
+	$plaintext = gmssl_sm2_decrypt($sm2_key, $ciphertext);
+	print($plaintext."\n");
+?>
+```
+
 
 ## GmSSL PHP API
 
@@ -512,16 +586,26 @@ Generate SM9 signing master key
 gmssl_sm9_sign_master_key_generate(): string
 ```
 
+* Parameters - None
+* Return Values - SM9 signing master key.
+* Errors/Exceptions - Throw exceptions on GmSSL library inner errors.
+
 ### **gmssl_sm9_sign_master_key_extract_key**
 
 Extract the signing private key from SM9 master key with signer's ID
 
 ```php
 gmssl_sm9_sign_master_key_extract_key(
-	string $masterKey,
+	string $master_key,
 	string $id
 ): string
 ```
+
+* Parameters
+  * master_key - SM9 signing master key.
+  * id - User's identity
+* Return Values - User's sm9 signing private key extracted from the master key correponding to the given **id**
+* Errors/Exceptions - Throw exceptions on invalid parameters or GmSSL library inner errors.
 
 ### **gmssl_sm9_sign_master_key_info_encrypt_to_pem**
 
@@ -529,11 +613,19 @@ Export SM9 signing master key to encrypted PEM file
 
 ```php
 gmssl_sm9_sign_master_key_info_encrypt_to_pem(
-	string $masterKey,
+	string $master_key,
 	string $file,
 	string $passphrase
 ): bool
 ```
+
+* Parameters
+  * master_key - SM9 signing master key
+  * file - The output PEM file path.
+  * passphrase - The passphrase/password to encrypt the private key.
+* Return Values: **true** on success or **false** on failure.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 
 ### **gmssl_sm9_sign_master_key_info_decrypt_from_pem**
 
@@ -546,16 +638,29 @@ gmssl_sm9_sign_master_key_info_decrypt_from_pem(
 ): string
 ```
 
+* Parameters
+  * file - The input password encrypted SM9 signing master key PEM file path.
+  * passphrase - The passphrase/password to decrypt the PEM file.
+* Return Values: SM9 signing master key
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
+
 ### **gmssl_sm9_sign_master_public_key_to_pem**
 
 Export SM9 signing master public key to file
 
 ```php
 gmssl_sm9_sign_master_public_key_to_pem(
-	string $masterKey,
+	string $master_key,
 	string $file,
 ): bool
 ```
+
+* Parameters
+  * master_key - SM9 signing master key or master public key
+  * file - The output SM9 signing master public key PEM file path.
+* Return Values: **true** on success or **false** on failure.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_sm9_sign_master_public_key_from_pem**
 
@@ -567,17 +672,30 @@ gmssl_sm9_sign_master_public_key_from_pem(
 ): string
 ```
 
+* Parameters
+  * file - The SM9 signing master public key PEM file.
+* Return Values: SM9 signing master public key.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_sm9_sign_key_info_encrypt_to_pem**
 
 Export user's SM9 signing key to encrypted PEM file
 
 ```php
 gmssl_sm9_sign_key_info_encrypt_to_pem(
-	string $signKey,
+	string $sign_key,
 	string $file,
 	string $passphrase
 ): bool
 ```
+
+* Parameters
+  * sign_key - SM9 signing private key
+  * file - The output PEM file path.
+  * passphrase - The passphrase/password to encrypt the private key.
+* Return Values: **true** on success or **false** on failure.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 
 ### **gmssl_sm9_sign_key_info_decrypt_from_pem**
 
@@ -590,16 +708,28 @@ gmssl_sm9_sign_key_info_decrypt_from_pem(
 ): string
 ```
 
+* Parameters
+  * file - The input password encrypted SM9 signing private key PEM file path.
+  * passphrase - The passphrase/password to decrypt the PEM file.
+* Return Values: SM9 signing private key
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_sm9_sign**
 
 Sign message with user's SM9 signing key
 
 ```php
 gmssl_sm9_sign(
-	string $privateKey,
+	string $sign_key,
 	string $message
 ): string
 ```
+
+* Parameters
+  * sign_key - Signer's SM9 private key.
+  * messsage - To be signed message of any length.
+* Return Values - The generated SM9 signature in DER encoding, the raw data bytes start with a `0x30` byte.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_sm9_verify**
 
@@ -608,12 +738,20 @@ Verify SM9 signature of message with signer's ID
 
 ```php
 gmssl_sm9_verify(
-	string $masterPublicKey,
+	string $master_public_key,
 	string $id,
 	string $message,
 	string $signature
 ): bool
 ```
+
+* Parameters
+  * master_public_key - SM9 signing master public key.
+  * id - Signer's identity string.
+  * messsage - Signed message of any length.
+  * signature - SM9 signature.
+* Return Values - **ture** or **false**.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_sm9_enc_master_key_generate**
 
@@ -623,6 +761,10 @@ Generate SM9 encryption master key
 gmssl_sm9_enc_master_key_generate(): string
 ```
 
+* Parameters - None
+* Return Values - SM9 signing master key.
+* Errors/Exceptions - Throw exceptions on GmSSL library inner errors.
+
 
 ### **gmssl_sm9_enc_master_key_extract_key**
 
@@ -630,10 +772,17 @@ Extract the encryption private key from SM9 master key with user's ID
 
 ```php
 gmssl_sm9_enc_master_key_extract_key(
-	string $masterKey,
+	string $master_key,
 	string $id
 ): string
 ```
+
+* Parameters
+  * master_key - SM9 encryption master key.
+  * id - User's identity
+* Return Values - User's sm9 encryption private key extracted from the master key correponding to the given **id**
+* Errors/Exceptions - Throw exceptions on invalid parameters or GmSSL library inner errors.
+
 
 ###**gmssl_sm9_enc_master_key_info_encrypt_to_pem**
 
@@ -641,11 +790,19 @@ Export SM9 encryption master key to encrypted PEM file
 
 ```php
 gmssl_sm9_enc_master_key_info_encrypt_to_pem(
-	string $masterKey,
+	string $master_key,
 	string $file,
 	string $passphrase
 ): bool
 ```
+
+* Parameters
+  * master_key - SM9 encryption master key
+  * file - The output PEM file path.
+  * passphrase - The passphrase/password to encrypt the private key.
+* Return Values: **true** on success or **false** on failure.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 
 ### **gmssl_sm9_enc_master_key_info_decrypt_from_pem**
 
@@ -658,16 +815,28 @@ gmssl_sm9_enc_master_key_info_decrypt_from_pem(
 ): string
 ```
 
+* Parameters
+  * file - The input password encrypted SM9 encryption master key PEM file path.
+  * passphrase - The passphrase/password to decrypt the PEM file.
+* Return Values: SM9 encryption master key
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_sm9_enc_master_public_key_to_pem**
 
 Export SM9 encryption master public key to file
 
 ```php
 gmssl_sm9_enc_master_public_key_to_pem(
-	string $masterKey,
+	string $master_key,
 	string $file,
 ): bool
 ```
+
+* Parameters
+  * master_key - SM9 encryption master key or master public key
+  * file - The output SM9 encryption master public key PEM file path.
+* Return Values: **true** on success or **false** on failure.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_sm9_enc_master_public_key_from_pem**
 
@@ -679,17 +848,30 @@ gmssl_sm9_enc_master_public_key_from_pem(
 ): string
 ```
 
+* Parameters
+  * file - The SM9 encryption master public key PEM file.
+* Return Values: SM9 encryption master public key.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_sm9_enc_key_info_encrypt_to_pem**
 
 Export user's SM9 encryption key to encrypted PEM file
 
 ```php
 gmssl_sm9_enc_key_info_encrypt_to_pem(
-	string $signKey,
+	string $enc_key,
 	string $file,
 	string $passphrase
 ): bool
 ```
+
+* Parameters
+  * enc_key - SM9 encryption private key
+  * file - The output PEM file path.
+  * passphrase - The passphrase/password to encrypt the private key.
+* Return Values: **true** on success or **false** on failure.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 
 ### **gmssl_sm9_enc_key_info_decrypt_from_pem**
 
@@ -702,17 +884,29 @@ gmssl_sm9_enc_key_info_decrypt_from_pem(
 ): string
 ```
 
+* Parameters
+  * file - The input password encrypted SM9 encryption private key PEM file path.
+  * passphrase - The passphrase/password to decrypt the PEM file.
+* Return Values: SM9 encryption private key
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_sm9_encrypt**
 
 Encrypt short message with recipient's ID
 
 ```php
 gmssl_sm9_encrypt(
-	string $masterPublicKey,
+	string $master_public_key,
 	string $id,
 	string $data
 ): string
 ```
+
+* Parameters
+  * master_public_key - SM9 encryption master public key.
+  * data - To be encrypted plaintext. SM9 encryption should be used to protect key materials. The length should not longer than GMSSL_SM9_MAX_PLAINTEXT_SIZE.
+* Return Values - Ciphertext.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_sm9_decrypt**
 
@@ -720,11 +914,18 @@ Decrypt SM9 ciphertext with user's SM9 private key
 
 ```php
 gmssl_sm9_decrypt(
-	string $privateKey,
+	string $enc_key,
 	string $id,
 	string $ciphertext
 ): string
 ```
+
+* Parameters
+  * enc_key - Receiver's SM9 encryption/decryption private key
+  * id - Receiver's identity
+  * ciphertext - SM9 Ciphertext.
+* Return Values - Plaintext.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_cert_from_pem**
 
@@ -733,6 +934,11 @@ Import X.509 certificate from PEM file.
 ```php
 gmssl_cert_from_pem(string $path): string
 ```
+
+* Parameters
+  * path - Certificate file path, the certificate should be a SM2 certficate in PEM format.
+* Return Values - SM2 certificate. The raw data of the return value is the DER-encoding bytes of the certificate.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_cert_print**
 
@@ -745,6 +951,12 @@ gmssl_cert_print(
 ): bool
 ```
 
+* Parameters
+  * cert - SM2 certificate, typically from `gmssl_cert_from_pem`.
+  * label - Label string that will be printed at the first line of the output.
+* Return Values - **true** or **false**
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_cert_get_serial_number**
 
 Get the SerialNumber field of a X.509 certificate.
@@ -753,13 +965,23 @@ Get the SerialNumber field of a X.509 certificate.
 gmssl_cert_get_serial_number(string $cert): string
 ```
 
+* Parameters
+  * cert - SM2 certificate, typically from `gmssl_cert_from_pem`.
+* Return Values - SerialNumber field raw data (bytes).
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_cert_get_issuer**
 
 Get the Issuer field of a X.509 certificate.
 
 ```php
-gmssl_cert_get_issuer(string $cert): string
+gmssl_cert_get_issuer(string $cert): array
 ```
+
+* Parameters
+  * cert - SM2 certificate, typically from `gmssl_cert_from_pem`.
+* Return Values - Issuer field as an array. The element with key `raw_data` is the DER-encoding of the X.509 DN value (without Tag and Length).
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_cert_get_validity**
 
@@ -769,13 +991,23 @@ Get the Validity field of a X.509 certificate.
 gmssl_cert_get_validity(string $cert): array
 ```
 
+* Parameters
+  * cert - SM2 certificate, typically from `gmssl_cert_from_pem`.
+* Return Values - Validity field of the certificate as an array. The return array has two elements with key `notBefore` and `notAfter`, the value is an `int` value of the timestamp.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
 ### **gmssl_cert_get_subject**
 
 Get the Subject field of a X.509 certificate.
 
 ```php
-gmssl_cert_get_subject(string $cert): string
+gmssl_cert_get_subject(string $cert): array
 ```
+
+* Parameters
+  * cert - SM2 certificate, typically from `gmssl_cert_from_pem`.
+* Return Values - Subject field as an array. The element with key `raw_data` is the DER-encoding of the X.509 DN value (without Tag and Length).
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_cert_get_subject_public_key**
 
@@ -784,6 +1016,11 @@ Get the SM2 public key from the SubjectPublicKeyInfo field of a X.509 certificat
 ```php
 gmssl_cert_get_subject_public_key(string $cert): string
 ```
+
+* Parameters
+  * cert - SM2 certificate, typically from `gmssl_cert_from_pem`.
+* Return Values - SM2 public key from the SubjectPublicKeyInfo field of the certificate. The return value format is the same as output of the `sm2_public_key_info_from_pem`.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 ### **gmssl_cert_verify_by_ca_cert**
 
@@ -797,6 +1034,12 @@ gmssl_cert_verify_by_ca_cert(
 ): bool
 ```
 
+* Parameters
+  * cert - The verified SM2 certificate, to be verified if it is signed (issued) by the **cacert**.
+  * cacert - The CA's SM2 certificate. The Issuer field of **cert** should be the same as the Subject field of the **cacert**.
+  * sm2_id - The CA's signing SM2 ID, is not specified, GMSSL_SM2_DEFAULT_ID should be used.
+* Return Values - **true** or **false**
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
 
 
