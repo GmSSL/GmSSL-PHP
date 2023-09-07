@@ -44,6 +44,7 @@ PHP_MINIT_FUNCTION(gmssl)
 	REGISTER_STRING_CONSTANT("GMSSL_PHP_VERSION", PHP_GMSSL_VERSION, CONST_CS | CONST_PERSISTENT);
 	REGISTER_STRING_CONSTANT("GMSSL_LIBRARY_VERSION", (char *)gmssl_version_str(), CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("GMSSL_SM3_DIGEST_SIZE", SM3_DIGEST_SIZE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("GMSSL_SM3_HMAC_SIZE", SM3_HMAC_SIZE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("GMSSL_SM3_HMAC_MIN_KEY_SIZE", 16, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("GMSSL_SM4_KEY_SIZE", SM4_KEY_SIZE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("GMSSL_SM4_BLOCK_SIZE", SM4_BLOCK_SIZE, CONST_CS | CONST_PERSISTENT);
@@ -242,7 +243,7 @@ PHP_FUNCTION(gmssl_sm4_cbc_encrypt)
 
 	out = zend_string_alloc(ZSTR_LEN(in) + SM4_BLOCK_SIZE - ZSTR_LEN(in) % SM4_BLOCK_SIZE, 0);
 
-	sm4_set_encrypt_key(&sm4_key, ZSTR_VAL(key));
+	sm4_set_encrypt_key(&sm4_key, (uint8_t *)ZSTR_VAL(key));
 
 	if (sm4_cbc_padding_encrypt(&sm4_key, (uint8_t *)ZSTR_VAL(iv),
 		(uint8_t *)ZSTR_VAL(in), ZSTR_LEN(in),
@@ -286,7 +287,7 @@ PHP_FUNCTION(gmssl_sm4_cbc_decrypt)
 
 	out = zend_string_alloc(ZSTR_LEN(in), 0);
 
-	sm4_set_decrypt_key(&sm4_key, ZSTR_VAL(key));
+	sm4_set_decrypt_key(&sm4_key, (uint8_t *)ZSTR_VAL(key));
 
 	if (sm4_cbc_padding_decrypt(&sm4_key, (uint8_t *)ZSTR_VAL(iv),
 		(uint8_t *)ZSTR_VAL(in), ZSTR_LEN(in),
@@ -332,7 +333,7 @@ PHP_FUNCTION(gmssl_sm4_ctr_encrypt)
 
 	out = zend_string_alloc(ZSTR_LEN(in), 0);
 
-	sm4_set_encrypt_key(&sm4_key, ZSTR_VAL(key));
+	sm4_set_encrypt_key(&sm4_key, (uint8_t *)ZSTR_VAL(key));
 	memcpy(ctr, ZSTR_VAL(iv), ZSTR_LEN(iv));
 
 	sm4_ctr_encrypt(&sm4_key, ctr, (uint8_t *)ZSTR_VAL(in), ZSTR_LEN(in), (uint8_t *)ZSTR_VAL(out));
@@ -359,8 +360,8 @@ PHP_FUNCTION(gmssl_sm4_gcm_encrypt)
 		Z_PARAM_STR(key)
 		Z_PARAM_STR(iv)
 		Z_PARAM_STR(aad)
-		Z_PARAM_STR(in)
 		Z_PARAM_LONG(taglen)
+		Z_PARAM_STR(in)
 	ZEND_PARSE_PARAMETERS_END();
 
 	if (ZSTR_LEN(key) != SM4_KEY_SIZE) {
@@ -420,8 +421,8 @@ PHP_FUNCTION(gmssl_sm4_gcm_decrypt)
 		Z_PARAM_STR(key)
 		Z_PARAM_STR(iv)
 		Z_PARAM_STR(aad)
-		Z_PARAM_STR(in)
 		Z_PARAM_LONG(taglen)
+		Z_PARAM_STR(in)
 	ZEND_PARSE_PARAMETERS_END();
 
 	if (ZSTR_LEN(key) != SM4_KEY_SIZE) {
@@ -491,7 +492,7 @@ PHP_FUNCTION(gmssl_zuc_encrypt)
 
 	out = zend_string_alloc(ZSTR_LEN(in), 0);
 
-	zuc_init(&zuc_state, ZSTR_VAL(key), ZSTR_VAL(iv));
+	zuc_init(&zuc_state, (uint8_t *)ZSTR_VAL(key), (uint8_t *)ZSTR_VAL(iv));
 	zuc_encrypt(&zuc_state, (uint8_t *)ZSTR_VAL(in), ZSTR_LEN(in), (uint8_t *)ZSTR_VAL(out));
 	gmssl_secure_clear(&zuc_state, sizeof(zuc_state));
 
@@ -537,7 +538,7 @@ PHP_FUNCTION(gmssl_sm2_compute_z)
 
 	ret = zend_string_alloc(SM3_DIGEST_SIZE, 0);
 
-	if (sm2_compute_z(ZSTR_VAL(ret), &((SM2_KEY *)ZSTR_VAL(sm2_pub))->public_key, ZSTR_VAL(id), ZSTR_LEN(id)) != 1) {
+	if (sm2_compute_z((uint8_t *)ZSTR_VAL(ret), &((SM2_KEY *)ZSTR_VAL(sm2_pub))->public_key, ZSTR_VAL(id), ZSTR_LEN(id)) != 1) {
 		zend_string_efree(ret);
 		zend_throw_exception(zend_ce_error, "libgmssl inner error", 0);
 		return;
@@ -1487,7 +1488,7 @@ PHP_FUNCTION(gmssl_cert_get_serial_number)
 		Z_PARAM_STR(cert)
 	ZEND_PARSE_PARAMETERS_END();
 
-	if (x509_cert_get_issuer_and_serial_number(ZSTR_VAL(cert), ZSTR_LEN(cert), NULL, 0, &serial, &serial_len) != 1) {
+	if (x509_cert_get_issuer_and_serial_number((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), NULL, 0, &serial, &serial_len) != 1) {
 		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
 		return;
 	}
@@ -1577,7 +1578,7 @@ PHP_FUNCTION(gmssl_cert_get_issuer)
 		Z_PARAM_STR(cert)
 	ZEND_PARSE_PARAMETERS_END();
 
-	if (x509_cert_get_issuer(ZSTR_VAL(cert), ZSTR_LEN(cert), &issuer, &issuer_len) != 1) {
+	if (x509_cert_get_issuer((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), &issuer, &issuer_len) != 1) {
 		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
 		return;
 	}
@@ -1601,7 +1602,7 @@ PHP_FUNCTION(gmssl_cert_get_validity)
 		Z_PARAM_STR(cert)
 	ZEND_PARSE_PARAMETERS_END();
 
-	if (x509_cert_get_details(ZSTR_VAL(cert), ZSTR_LEN(cert),
+	if (x509_cert_get_details((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert),
 		NULL,
 		NULL, NULL,
 		NULL,
@@ -1631,7 +1632,7 @@ PHP_FUNCTION(gmssl_cert_get_subject)
 		Z_PARAM_STR(cert)
 	ZEND_PARSE_PARAMETERS_END();
 
-	if (x509_cert_get_subject(ZSTR_VAL(cert), ZSTR_LEN(cert), &subject, &subject_len) != 1) {
+	if (x509_cert_get_subject((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), &subject, &subject_len) != 1) {
 		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
 		return;
 	}
@@ -1656,7 +1657,7 @@ PHP_FUNCTION(gmssl_cert_get_subject_public_key)
 
 	ret = zend_string_alloc(sizeof(SM2_KEY), 0);
 
-	if (x509_cert_get_subject_public_key(ZSTR_VAL(cert), ZSTR_LEN(cert), (SM2_KEY *)ZSTR_VAL(ret)) != 1) {
+	if (x509_cert_get_subject_public_key((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), (SM2_KEY *)ZSTR_VAL(ret)) != 1) {
 		zend_string_efree(ret);
 		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
 		return;
@@ -1739,12 +1740,12 @@ ZEND_BEGIN_ARG_INFO(arginfo_key_iv_in, 0)
 	ZEND_ARG_INFO(0, in)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO(arginfo_key_iv_aad_in_taglen, 0)
+ZEND_BEGIN_ARG_INFO(arginfo_key_iv_aad_taglen_in, 0)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, iv)
 	ZEND_ARG_INFO(0, aad)
-	ZEND_ARG_INFO(0, in)
 	ZEND_ARG_INFO(0, taglen)
+	ZEND_ARG_INFO(0, in)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO(arginfo_keypair_file_pass, 0)
@@ -1821,8 +1822,8 @@ static const zend_function_entry gmssl_functions[] = {
 	PHP_FE(gmssl_sm4_cbc_encrypt,				arginfo_key_iv_in)
 	PHP_FE(gmssl_sm4_cbc_decrypt,				arginfo_key_iv_in)
 	PHP_FE(gmssl_sm4_ctr_encrypt,				arginfo_key_iv_in)
-	PHP_FE(gmssl_sm4_gcm_encrypt,				arginfo_key_iv_aad_in_taglen)
-	PHP_FE(gmssl_sm4_gcm_decrypt,				arginfo_key_iv_aad_in_taglen)
+	PHP_FE(gmssl_sm4_gcm_encrypt,				arginfo_key_iv_aad_taglen_in)
+	PHP_FE(gmssl_sm4_gcm_decrypt,				arginfo_key_iv_aad_taglen_in)
 	PHP_FE(gmssl_zuc_encrypt,				arginfo_key_iv_in)
 	PHP_FE(gmssl_sm2_key_generate,				arginfo_none)
 	PHP_FE(gmssl_sm2_compute_z,				arginfo_keypair_id)

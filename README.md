@@ -118,6 +118,7 @@ Here is the example of SM2 key generation, signature generation/verification, an
 * **GMSSL_PHP_VERSION**(string)
 * **GMSSL_LIBRARAY_VERSION** (string)
 * **GMSSL_SM3_DIGEST_SIZE** (int)
+* **GMSSL_SM3_HMAC_SIZE** (int)
 * **GMSSL_SM3_HMAC_MIN_KEY_SIZE** (int)
 * **GMSSL_SM4_KEY_SIZE** (int)
 * **GMSSL_SM4_BLOCK_SIZE** (int)
