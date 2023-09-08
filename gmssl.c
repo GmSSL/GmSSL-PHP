@@ -1805,9 +1805,9 @@ ZEND_BEGIN_ARG_INFO(arginfo_cert_label, 0)
 	ZEND_ARG_INFO(0, label)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO(arginfo_cert_cert_id, 0)
+ZEND_BEGIN_ARG_INFO(arginfo_cert_cacert_id, 0)
 	ZEND_ARG_INFO(0, cert)
-	ZEND_ARG_INFO(0, cert)
+	ZEND_ARG_INFO(0, cacert)
 	ZEND_ARG_INFO(0, id)
 ZEND_END_ARG_INFO()
 
@@ -1862,7 +1862,7 @@ static const zend_function_entry gmssl_functions[] = {
 	PHP_FE(gmssl_cert_get_validity,				arginfo_cert)
 	PHP_FE(gmssl_cert_get_subject,				arginfo_cert)
 	PHP_FE(gmssl_cert_get_subject_public_key,		arginfo_cert)
-	PHP_FE(gmssl_cert_verify_by_ca_cert,			arginfo_cert_cert_id)
+	PHP_FE(gmssl_cert_verify_by_ca_cert,			arginfo_cert_cacert_id)
 	PHP_FE_END
 };
 
