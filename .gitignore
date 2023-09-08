@@ -36,3 +36,5 @@ tests/*/*.exp
 tests/*/*.log
 tests/*/*.sh
 *.pem
+*.txt
+*.dep
