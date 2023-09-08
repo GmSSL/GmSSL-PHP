@@ -4,6 +4,11 @@
 
 The PHP GmSSL extension is the binding to the GmSSL C library, which provides functions of Chinese SM2, SM3, SM4, SM9, ZUC crypto algorithms.
 
+## Download
+
+ * GitHub repo of this project https://github.com/GmSSL/GmSSL-PHP
+ * Latest source code [GmSSL-PHP-main.zip](https://github.com/GmSSL/GmSSL-PHP/archive/refs/heads/main.zip)
+
 ## Installation
 
 To compile and install the GmSSL PHP extension, you need to install the GmSSL library (version >= 3.1.0). See the GmSSL INSTALL.md for more details.
@@ -237,7 +242,7 @@ gmssl_sm3_pbkdf2(
 	string $password,
 	string $salt,
 	int $iter,
-	string $outlen  
+	string $outlen
 ): string
 ```
 
@@ -350,6 +355,7 @@ gmssl_sm4_gcm_encrypt(
 	string $key,
 	string $iv,
 	string $aad,
+	int $taglen,
 	string $data
 ): string
 ```
@@ -358,6 +364,7 @@ gmssl_sm4_gcm_encrypt(
   * key - The encryption key. The length should be GMSSL_SM4_KEY_SIZE (16).
   * iv - Initial Vector (IV), length should be between GMSSL_SM4_GCM_MIN_IV_SIZE and GMSSL_SM4_GCM_MAX_IV_SIZE. Use GMSSL_SM4_GCM_DEFAULT_IV_SIZE is recommened.
   * aad - AAD (Associated Authenticated Data) is the authenticated-only message (not encrypted).
+  * taglen - Length of generated MAC tag.
   * data - To be encrypted plaintext of any length.
 * Return Values - The output GCM ciphertext.
 * Errors/Exceptions - Throw exceptions on invalid input or GmSSL library inner errors.
@@ -372,6 +379,7 @@ gmssl_sm4_gcm_decrypt(
 	string $key,
 	string $iv,
 	string $aad,
+	int $taglen,
 	string $ciphertext
 ): string
 ```
@@ -380,6 +388,7 @@ gmssl_sm4_gcm_decrypt(
   * key - The decryption key. The length should be GMSSL_SM4_KEY_SIZE (16).
   * iv - Initial Vector (IV), use the same value in gmssl_sm4_gcm_encrypt
   * aad - AAD (Associated Authenticated Data) is the authenticated-only message (not encrypted).
+  * taglen - Length of the MAC tag at the last of ciphertext.
   * data - To be encrypted plaintext of any length.
 * Return Values - The output GCM ciphertext.
 * Errors/Exceptions - Throw exceptions on invalid input or GmSSL library inner errors.
