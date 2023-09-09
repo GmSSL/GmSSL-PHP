@@ -127,6 +127,8 @@ Here is the example of SM2 key generation, signature generation/verification, an
 * **GMSSL_SM3_HMAC_MIN_KEY_SIZE** (int)
 * **GMSSL_SM4_KEY_SIZE** (int)
 * **GMSSL_SM4_BLOCK_SIZE** (int)
+* **GMSSL_SM4_CBC_IV_SIZE** (int)
+* **GMSSL_SM4_CTR_IV_SIZE** (int)
 * **GMSSL_SM4_GCM_MIN_IV_SIZE** (int)
 * **GMSSL_SM4_GCM_MAX_IV_SIZE** (int)
 * **GMSSL_SM4_GCM_DEFAULT_IV_SIZE** (int)
