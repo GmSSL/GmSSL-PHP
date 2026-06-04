@@ -34,6 +34,11 @@
 #include <gmssl/sm9.h>
 #include <gmssl/zuc.h>
 #include <gmssl/x509.h>
+#if defined(__has_include)
+# if __has_include(<gmssl/aead.h>)
+#  include <gmssl/aead.h>
+# endif
+#endif
 #include <gmssl/pbkdf2.h>
 #include <gmssl/error.h>
 
@@ -91,20 +96,16 @@ PHP_FUNCTION(gmssl_rand_bytes)
 PHP_FUNCTION(gmssl_sm3)
 {
 	zend_string *msg;
-	SM3_DIGEST_CTX sm3_ctx;
+	SM3_CTX sm3_ctx;
 	uint8_t dgst[SM3_DIGEST_SIZE];
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
 		Z_PARAM_STR(msg)
 	ZEND_PARSE_PARAMETERS_END();
 
-	if (sm3_digest_init(&sm3_ctx, NULL, 0) != 1
-		|| sm3_digest_update(&sm3_ctx, (uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg)) != 1
-		|| sm3_digest_finish(&sm3_ctx, dgst) != 1) {
-		gmssl_secure_clear(&sm3_ctx, sizeof(sm3_ctx));
-		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
-		return;
-	}
+	sm3_init(&sm3_ctx);
+	sm3_update(&sm3_ctx, (uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg));
+	sm3_finish(&sm3_ctx, dgst);
 	gmssl_secure_clear(&sm3_ctx, sizeof(sm3_ctx));
 
 	RETURN_STRINGL((char *)dgst, sizeof(dgst));
@@ -1724,12 +1725,15 @@ PHP_FUNCTION(gmssl_cert_get_subject_public_key)
 {
 	zend_string *ret;
 	zend_string *cert;
+#if GMSSL_VERSION_NUM >= 30103
 	X509_KEY x509_key;
+#endif
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
 		Z_PARAM_STR(cert)
 	ZEND_PARSE_PARAMETERS_END();
 
+#if GMSSL_VERSION_NUM >= 30103
 	memset(&x509_key, 0, sizeof(x509_key));
 
 	if (x509_cert_get_subject_public_key((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), &x509_key) != 1) {
@@ -1746,6 +1750,15 @@ PHP_FUNCTION(gmssl_cert_get_subject_public_key)
 	ret = zend_string_alloc(sizeof(SM2_KEY), 0);
 	memcpy(ZSTR_VAL(ret), &x509_key.u.sm2_key, sizeof(SM2_KEY));
 	x509_key_cleanup(&x509_key);
+#else
+	ret = zend_string_alloc(sizeof(SM2_KEY), 0);
+
+	if (x509_cert_get_subject_public_key((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), (SM2_KEY *)ZSTR_VAL(ret)) != 1) {
+		zend_string_efree(ret);
+		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
+		return;
+	}
+#endif
 
 	ZSTR_VAL(ret)[sizeof(SM2_KEY)] = 0;
 

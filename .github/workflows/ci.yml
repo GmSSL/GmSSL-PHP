@@ -79,7 +79,7 @@ jobs:
       PHP_VERSION: 8.3
       PHP_SDK_DIR: C:\php-sdk
       PHP_BUILD_DIR: C:\php-build
-      GMSSL_PREFIX: C:\gmssl
+      GMSSL_PREFIX: C:/gmssl
 
     steps:
       - name: Checkout
@@ -119,9 +119,8 @@ jobs:
         shell: cmd
         working-directory: C:\php-build
         run: |
-          call %PHP_SDK_DIR%\phpsdk-vs17-x64.bat -t
           buildconf.bat --force
-          configure.bat --disable-all --enable-cli --with-gmssl=shared --with-extra-includes=%GMSSL_PREFIX%\include --with-extra-libs=%GMSSL_PREFIX%\lib
+          configure.bat --disable-all --enable-cli --with-gmssl=shared --with-extra-includes=%GMSSL_PREFIX%/include --with-extra-libs=%GMSSL_PREFIX%/lib
           nmake
 
       - name: Smoke test extension
@@ -129,5 +128,5 @@ jobs:
         run: |
           $dll = Get-ChildItem -Path "$env:PHP_BUILD_DIR" -Recurse -Filter php_gmssl.dll | Select-Object -First 1
           if (-not $dll) { throw "php_gmssl.dll was not built" }
-          Copy-Item "$env:GMSSL_PREFIX\bin\*.dll" (Split-Path $dll.FullName) -ErrorAction SilentlyContinue
+          Copy-Item "$env:GMSSL_PREFIX/bin/*.dll" (Split-Path $dll.FullName) -ErrorAction SilentlyContinue
           php -d "extension=$($dll.FullName)" -r "if (!extension_loaded('gmssl')) { exit(1); } echo GMSSL_PHP_VERSION, PHP_EOL;"
