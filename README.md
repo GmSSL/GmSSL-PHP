@@ -7,7 +7,10 @@ The PHP GmSSL extension is the binding to the GmSSL C library, which provides fu
 ## Download
 
  * GitHub repo of this project https://github.com/GmSSL/GmSSL-PHP
+ * Stable releases are published from GitHub tags, for example [GmSSL-PHP v1.1.1](https://github.com/GmSSL/GmSSL-PHP/releases/tag/v1.1.1)
  * Latest source code [GmSSL-PHP-main.zip](https://github.com/GmSSL/GmSSL-PHP/archive/refs/heads/main.zip)
+
+GmSSL-PHP is a standalone PHP extension and is not part of the official PHP source tree. The recommended release format is a GitHub source release with a signed version tag and the PECL-style `package.xml` metadata in the repository. Users build it with their local PHP headers and GmSSL installation, while project CI verifies Linux x64, Windows x64, and macOS ARM64 builds.
 
 ## Installation
 
@@ -19,6 +22,12 @@ $ phpize
 $ ./configure
 $ make
 $ sudo make install
+```
+
+If GmSSL is installed in a non-standard prefix, pass the prefix explicitly:
+
+```bash
+$ ./configure --with-gmssl=/path/to/gmssl
 ```
 
 The GmSSL PHP extension need to be enabled in the `php.ini`.
@@ -81,12 +90,12 @@ The GCM mode is the recommended mode for non-expert users.
 ```php
 <?php
 	$key = gmssl_rand_bytes(GMSSL_SM4_KEY_SIZE);
-	$iv = gmssl_rand_bytes(GMSSL_SM4_GCM_DEFAULT_ID_SIZE);
+	$iv = gmssl_rand_bytes(GMSSL_SM4_GCM_DEFAULT_IV_SIZE);
 	$aad = "Encoding: Text";
 	$message = "This is the secret text message.";
 
-	$ciphertext = gmssl_sm4_gcm_encrypt($key, $iv, $aad, $message, GMSSL_SM4_GCM_MAX_TAG_SIZE);
-	$plaintext = gmssl_sm4_gcm_decrypt($key, $iv, $aad, $ciphertext, GMSSL_SM4_GCM_MAX_TAG_SIZE);
+	$ciphertext = gmssl_sm4_gcm_encrypt($key, $iv, $aad, GMSSL_SM4_GCM_MAX_TAG_SIZE, $message);
+	$plaintext = gmssl_sm4_gcm_decrypt($key, $iv, $aad, GMSSL_SM4_GCM_MAX_TAG_SIZE, $ciphertext);
 
 	print(bin2hex($message)."\n");
 	print(bin2hex($plaintext)."\n");
@@ -102,7 +111,7 @@ Here is the example of SM2 key generation, signature generation/verification, an
 <?php
 	$sm2_key = gmssl_sm2_key_generate();
 	$pass = "123456";
-	gmssl_sm2_private_key_info_encrypt_to_pem($sm2_key, $pass, "sm2.pem");
+	gmssl_sm2_private_key_info_encrypt_to_pem($sm2_key, "sm2.pem", $pass);
 	gmssl_sm2_public_key_info_to_pem($sm2_key, "sm2pub.pem");
 	$sm2_pub = gmssl_sm2_public_key_info_from_pem("sm2pub.pem");
 
@@ -121,7 +130,7 @@ Here is the example of SM2 key generation, signature generation/verification, an
 ### Predefined Constants
 
 * **GMSSL_PHP_VERSION**(string)
-* **GMSSL_LIBRARAY_VERSION** (string)
+* **GMSSL_LIBRARY_VERSION** (string)
 * **GMSSL_SM3_DIGEST_SIZE** (int)
 * **GMSSL_SM3_HMAC_SIZE** (int)
 * **GMSSL_SM3_HMAC_MIN_KEY_SIZE** (int)
@@ -157,6 +166,8 @@ Here is the example of SM2 key generation, signature generation/verification, an
 * [gmssl_sm2_compute_z](#gmssl_sm2_compute_z) - Compute SM2 Z value from public key and ID.
 * [gmssl_sm2_private_key_info_encrypt_to_pem](#gmssl_sm2_private_key_info_encrypt_to_pem) - Export SM2 private key to password encrypted PEM file
 * [gmssl_sm2_private_key_info_decrypt_from_pem](#gmssl_sm2_private_key_info_decrypt_from_pem) - Import SM2 private key from password encrypted PEM file
+* [gmssl_sm2_private_key_info_to_pem](#gmssl_sm2_private_key_info_to_pem) - Export SM2 private key to unencrypted PEM file
+* [gmssl_sm2_private_key_info_from_pem](#gmssl_sm2_private_key_info_from_pem) - Import SM2 private key from unencrypted PEM file
 * [gmssl_sm2_public_key_info_to_pem](#gmssl_sm2_public_key_info_to_pem) - Export SM2 public key to PEM file
 * [gmssl_sm2_public_key_info_from_pem](#gmssl_sm2_public_key_info_from_pem) - Import SM2 public key from PEM file
 * [gmssl_sm2_sign](#gmssl_sm2_sign) - Sign message (not digest) and generate SM2 signature
@@ -478,6 +489,38 @@ gmssl_sm2_private_key_info_decrypt_from_pem(
 * Parameters
   * file - The password encrypted SM2 private key PEM file.
   * passphrase - The passphrase/password to decrypt the private key.
+* Return Values: SM2 private key, inner format is same as the output of `gmssl_sm2_key_generate`.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
+### **gmssl_sm2_private_key_info_to_pem**
+
+Export SM2 private key to unencrypted PEM file
+
+```php
+gmssl_sm2_private_key_info_to_pem(
+	string $keypair,
+	string $file
+): bool
+```
+
+* Parameters
+  * keypair - SM2 private key, should be 96-byte string generated from `gmssl_sm2_key_generate`.
+  * file - The output PEM file path.
+* Return Values: **true** on success or **false** on failure.
+* Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
+
+### **gmssl_sm2_private_key_info_from_pem**
+
+Import SM2 private key from unencrypted PEM file
+
+```php
+gmssl_sm2_private_key_info_from_pem(
+	string $file
+): string
+```
+
+* Parameters
+  * file - The unencrypted SM2 private key PEM file.
 * Return Values: SM2 private key, inner format is same as the output of `gmssl_sm2_key_generate`.
 * Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
 
@@ -1052,8 +1095,6 @@ gmssl_cert_verify_by_ca_cert(
   * sm2_id - The CA's signing SM2 ID, is not specified, GMSSL_SM2_DEFAULT_ID should be used.
 * Return Values - **true** or **false**
 * Errors/Exceptions - Throw exceptions on invalid parameters and GmSSL library inner errors.
-
-
 
 
 

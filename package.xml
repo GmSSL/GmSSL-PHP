@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.10.15" version="2.0"
+  xmlns="http://pear.php.net/dtd/package-2.0"
+  xmlns:tasks="http://pear.php.net/dtd/tasks-1.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+ <name>gmssl</name>
+ <channel>pecl.php.net</channel>
+ <summary>PHP extension bindings for the GmSSL cryptographic library</summary>
+ <description>
+GmSSL-PHP provides PHP bindings for the GmSSL C library, including SM2, SM3,
+SM4, SM9, ZUC, random generation, and X.509 certificate helpers.
+ </description>
+ <lead>
+  <name>Zhi Guan</name>
+  <user>guanzhi</user>
+  <email>guan@pku.edu.cn</email>
+  <active>yes</active>
+ </lead>
+ <date>2026-06-04</date>
+ <time>00:00:00</time>
+ <version>
+  <release>1.1.1</release>
+  <api>1.1.1</api>
+ </version>
+ <stability>
+  <release>stable</release>
+  <api>stable</api>
+ </stability>
+ <license uri="https://www.php.net/license/3_01.txt">PHP-3.01</license>
+ <notes>
+Fix PHP 8 named-parameter reflection for certificate verification, add
+unencrypted SM2 private-key PEM import/export helpers, improve GmSSL library
+detection, update release metadata, and add cross-platform CI coverage.
+ </notes>
+ <contents>
+  <dir name="/">
+   <file name="LICENSE" role="doc" />
+   <file name="README.md" role="doc" />
+   <file name="config.m4" role="src" />
+   <file name="config.w32" role="src" />
+   <file name="gmssl.c" role="src" />
+   <file name="php_gmssl.h" role="src" />
+   <dir name="examples">
+    <file name="cert.php" role="doc" />
+    <file name="consts.php" role="doc" />
+    <file name="rand.php" role="doc" />
+    <file name="sm2.php" role="doc" />
+    <file name="sm3.php" role="doc" />
+    <file name="sm3_hmac.php" role="doc" />
+    <file name="sm3_pbkdf2.php" role="doc" />
+    <file name="sm4.php" role="doc" />
+    <file name="sm4_cbc.php" role="doc" />
+    <file name="sm4_ctr.php" role="doc" />
+    <file name="sm4_gcm.php" role="doc" />
+    <file name="sm9_enc.php" role="doc" />
+    <file name="sm9_sign.php" role="doc" />
+    <file name="zuc.php" role="doc" />
+   </dir>
+   <dir name="tests">
+    <file name="cert.phpt" role="test" />
+    <file name="consts.phpt" role="test" />
+    <file name="rand.phpt" role="test" />
+    <file name="sm2.phpt" role="test" />
+    <file name="sm3.phpt" role="test" />
+    <file name="sm3_hmac.phpt" role="test" />
+    <file name="sm3_pbkdf2.phpt" role="test" />
+    <file name="sm4.phpt" role="test" />
+    <file name="sm4_cbc.phpt" role="test" />
+    <file name="sm4_ctr.phpt" role="test" />
+    <file name="sm4_gcm.phpt" role="test" />
+    <file name="sm9_enc.phpt" role="test" />
+    <file name="sm9_sign.phpt" role="test" />
+    <file name="zuc.phpt" role="test" />
+   </dir>
+  </dir>
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>7.0.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.10.0</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <providesextension>gmssl</providesextension>
+ <extsrcrelease />
+</package>

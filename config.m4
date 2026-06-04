@@ -1,94 +1,69 @@
 dnl config.m4 for extension gmssl
 
-dnl Comments in this file start with the string 'dnl'.
-dnl Remove where necessary.
-
-dnl If your extension references something external, use 'with':
-
-dnl PHP_ARG_WITH([gmssl],
-dnl   [for gmssl support],
-dnl   [AS_HELP_STRING([--with-gmssl],
-dnl     [Include gmssl support])])
-
-dnl Otherwise use 'enable':
-
-PHP_ARG_ENABLE([gmssl],
-  [whether to enable gmssl support],
-  [AS_HELP_STRING([--enable-gmssl],
-    [Enable gmssl support])],
-  [no])
+PHP_ARG_WITH([gmssl],
+  [for gmssl support],
+  [AS_HELP_STRING([[--with-gmssl[=DIR]]],
+    [Include GmSSL support. DIR is the GmSSL installation prefix])],
+  [yes])
 
 if test "$PHP_GMSSL" != "no"; then
-  dnl Write more examples of tests here...
+  AC_MSG_CHECKING([for GmSSL])
 
-  dnl Remove this code block if the library does not support pkg-config.
-  dnl PKG_CHECK_MODULES([LIBFOO], [foo])
-  dnl PHP_EVAL_INCLINE($LIBFOO_CFLAGS)
-  dnl PHP_EVAL_LIBLINE($LIBFOO_LIBS, GMSSL_SHARED_LIBADD)
+  if test "$PHP_GMSSL" != "yes"; then
+    GMSSL_DIR="$PHP_GMSSL"
+  elif test -n "$GMSSL_DIR"; then
+    GMSSL_DIR="$GMSSL_DIR"
+  else
+    GMSSL_DIR=""
+  fi
 
-  dnl If you need to check for a particular library version using PKG_CHECK_MODULES,
-  dnl you can use comparison operators. For example:
-  dnl PKG_CHECK_MODULES([LIBFOO], [foo >= 1.2.3])
-  dnl PKG_CHECK_MODULES([LIBFOO], [foo < 3.4])
-  dnl PKG_CHECK_MODULES([LIBFOO], [foo = 1.2.3])
+  if test -z "$GMSSL_DIR"; then
+    PKG_CHECK_MODULES([GMSSL], [gmssl >= 3.1.0], [
+      PHP_EVAL_INCLINE([$GMSSL_CFLAGS])
+      PHP_EVAL_LIBLINE([$GMSSL_LIBS], [GMSSL_SHARED_LIBADD])
+      gmssl_found=yes
+    ], [
+      gmssl_found=no
+    ])
+  else
+    gmssl_found=no
+  fi
 
-  dnl Remove this code block if the library supports pkg-config.
-  dnl --with-gmssl -> check with-path
-  dnl SEARCH_PATH="/usr/local /usr"     # you might want to change this
-  dnl SEARCH_FOR="/include/gmssl.h"  # you most likely want to change this
-  dnl if test -r $PHP_GMSSL/$SEARCH_FOR; then # path given as parameter
-  dnl   GMSSL_DIR=$PHP_GMSSL
-  dnl else # search default path list
-  dnl   AC_MSG_CHECKING([for gmssl files in default path])
-  dnl   for i in $SEARCH_PATH ; do
-  dnl     if test -r $i/$SEARCH_FOR; then
-  dnl       GMSSL_DIR=$i
-  dnl       AC_MSG_RESULT(found in $i)
-  dnl     fi
-  dnl   done
-  dnl fi
-  dnl
-  dnl if test -z "$GMSSL_DIR"; then
-  dnl   AC_MSG_RESULT([not found])
-  dnl   AC_MSG_ERROR([Please reinstall the gmssl distribution])
-  dnl fi
+  if test "$gmssl_found" = "no"; then
+    for i in "$GMSSL_DIR" /usr/local /usr /opt/homebrew /opt/local; do
+      if test -n "$i" && test -r "$i/include/gmssl/version.h"; then
+        GMSSL_DIR="$i"
+        gmssl_found=yes
+        break
+      fi
+    done
 
-  dnl Remove this code block if the library supports pkg-config.
-  dnl --with-gmssl -> add include path
-  dnl PHP_ADD_INCLUDE($GMSSL_DIR/include)
+    if test "$gmssl_found" = "yes"; then
+      PHP_ADD_INCLUDE([$GMSSL_DIR/include])
+      if test -d "$GMSSL_DIR/$PHP_LIBDIR"; then
+        PHP_ADD_LIBRARY_WITH_PATH([gmssl], [$GMSSL_DIR/$PHP_LIBDIR], [GMSSL_SHARED_LIBADD])
+      else
+        PHP_ADD_LIBRARY_WITH_PATH([gmssl], [$GMSSL_DIR/lib], [GMSSL_SHARED_LIBADD])
+      fi
+      PHP_ADD_LIBRARY([m], 1, [GMSSL_SHARED_LIBADD])
+    fi
+  fi
 
-  dnl Remove this code block if the library supports pkg-config.
-  dnl --with-gmssl -> check for lib and symbol presence
-  dnl LIBNAME=GMSSL # you may want to change this
-  dnl LIBSYMBOL=GMSSL # you most likely want to change this
+  if test "$gmssl_found" != "yes"; then
+    AC_MSG_RESULT([not found])
+    AC_MSG_ERROR([GmSSL >= 3.1.0 not found. Install GmSSL or pass --with-gmssl=/path/to/gmssl])
+  fi
 
-  dnl If you need to check for a particular library function (e.g. a conditional
-  dnl or version-dependent feature) and you are using pkg-config:
-  dnl PHP_CHECK_LIBRARY($LIBNAME, $LIBSYMBOL,
-  dnl [
-  dnl   AC_DEFINE(HAVE_GMSSL_FEATURE, 1, [ ])
-  dnl ],[
-  dnl   AC_MSG_ERROR([FEATURE not supported by your gmssl library.])
-  dnl ], [
-  dnl   $LIBFOO_LIBS
-  dnl ])
+  AC_MSG_RESULT([found])
 
-  dnl If you need to check for a particular library function (e.g. a conditional
-  dnl or version-dependent feature) and you are not using pkg-config:
-  PHP_CHECK_LIBRARY(gmssl, gmssl_version_str,
-  [
-    PHP_ADD_LIBRARY_WITH_PATH(gmssl, , GMSSL_SHARED_LIBADD)
-    AC_DEFINE(HAVE_GMSSL_FEATURE, 1, [ ])
-  ],[
-    AC_MSG_ERROR([FEATURE not supported by your gmssl library.])
-  ],[
-    -L$GMSSL_DIR/$PHP_LIBDIR -lm
+  PHP_CHECK_LIBRARY([gmssl], [gmssl_version_str], [
+    AC_DEFINE([HAVE_GMSSL], [1], [Have GmSSL support])
+  ], [
+    AC_MSG_ERROR([GmSSL library found, but gmssl_version_str is not linkable. Check library path or runtime linker configuration.])
+  ], [
+    $GMSSL_SHARED_LIBADD
   ])
- 
-  PHP_SUBST(GMSSL_SHARED_LIBADD)
 
-  dnl In case of no dependencies
-  AC_DEFINE(HAVE_GMSSL, 1, [ Have gmssl support ])
-
-  PHP_NEW_EXTENSION(gmssl, gmssl.c, $ext_shared)
+  PHP_SUBST([GMSSL_SHARED_LIBADD])
+  PHP_NEW_EXTENSION([gmssl], [gmssl.c], [$ext_shared])
 fi

@@ -1,0 +1,133 @@
+name: Build and Test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GMSSL_VERSION: 3.1.1
+
+jobs:
+  unix:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            runner: ubuntu-24.04
+            php-version: '8.3'
+          - name: macOS ARM64
+            runner: macos-14
+            php-version: '8.3'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: none
+
+      - name: Install build tools on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config autoconf libtool
+
+      - name: Install build tools on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install cmake pkg-config autoconf automake libtool
+
+      - name: Build GmSSL
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "v${GMSSL_VERSION}" https://github.com/guanzhi/GmSSL.git "$RUNNER_TEMP/GmSSL"
+          cmake -S "$RUNNER_TEMP/GmSSL" -B "$RUNNER_TEMP/GmSSL/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/gmssl"
+          cmake --build "$RUNNER_TEMP/GmSSL/build" --parallel
+          cmake --install "$RUNNER_TEMP/GmSSL/build"
+
+      - name: Build extension
+        shell: bash
+        run: |
+          phpize
+          ./configure --with-gmssl="$RUNNER_TEMP/gmssl"
+          make -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)"
+
+      - name: Run tests
+        shell: bash
+        env:
+          NO_INTERACTION: 1
+          REPORT_EXIT_STATUS: 1
+          LD_LIBRARY_PATH: ${{ runner.temp }}/gmssl/lib:${{ runner.temp }}/gmssl/lib64
+          DYLD_LIBRARY_PATH: ${{ runner.temp }}/gmssl/lib:${{ runner.temp }}/gmssl/lib64
+        run: make test
+
+  windows:
+    name: Windows x64
+    runs-on: windows-2022
+
+    env:
+      PHP_VERSION: 8.3
+      PHP_SDK_DIR: C:\php-sdk
+      PHP_BUILD_DIR: C:\php-build
+      GMSSL_PREFIX: C:\gmssl
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: gmssl-php
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          architecture: x64
+          coverage: none
+
+      - name: Install PHP SDK
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/php/php-sdk-binary-tools.git $env:PHP_SDK_DIR
+          git clone --depth 1 --branch "PHP-8.3" https://github.com/php/php-src.git $env:PHP_BUILD_DIR
+          New-Item -ItemType Directory -Force "$env:PHP_BUILD_DIR\ext\gmssl" | Out-Null
+          Copy-Item -Recurse "$env:GITHUB_WORKSPACE\gmssl-php\*" "$env:PHP_BUILD_DIR\ext\gmssl"
+
+      - name: Build GmSSL
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch "v$env:GMSSL_VERSION" https://github.com/guanzhi/GmSSL.git "$env:RUNNER_TEMP\GmSSL"
+          cmake -S "$env:RUNNER_TEMP\GmSSL" -B "$env:RUNNER_TEMP\GmSSL\build" -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$env:GMSSL_PREFIX"
+          cmake --build "$env:RUNNER_TEMP\GmSSL\build"
+          cmake --install "$env:RUNNER_TEMP\GmSSL\build"
+
+      - name: Build extension
+        shell: cmd
+        working-directory: C:\php-build
+        run: |
+          call %PHP_SDK_DIR%\phpsdk-vs17-x64.bat -t
+          buildconf.bat --force
+          configure.bat --disable-all --enable-cli --with-gmssl=shared --with-extra-includes=%GMSSL_PREFIX%\include --with-extra-libs=%GMSSL_PREFIX%\lib
+          nmake
+
+      - name: Smoke test extension
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Path "$env:PHP_BUILD_DIR" -Recurse -Filter php_gmssl.dll | Select-Object -First 1
+          if (-not $dll) { throw "php_gmssl.dll was not built" }
+          Copy-Item "$env:GMSSL_PREFIX\bin\*.dll" (Split-Path $dll.FullName) -ErrorAction SilentlyContinue
+          php -d "extension=$($dll.FullName)" -r "if (!extension_loaded('gmssl')) { exit(1); } echo GMSSL_PHP_VERSION, PHP_EOL;"

@@ -34,7 +34,6 @@
 #include <gmssl/sm9.h>
 #include <gmssl/zuc.h>
 #include <gmssl/x509.h>
-#include <gmssl/aead.h>
 #include <gmssl/pbkdf2.h>
 #include <gmssl/error.h>
 
@@ -92,13 +91,21 @@ PHP_FUNCTION(gmssl_rand_bytes)
 PHP_FUNCTION(gmssl_sm3)
 {
 	zend_string *msg;
+	SM3_DIGEST_CTX sm3_ctx;
 	uint8_t dgst[SM3_DIGEST_SIZE];
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
 		Z_PARAM_STR(msg)
 	ZEND_PARSE_PARAMETERS_END();
 
-	sm3_digest((uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg), dgst);
+	if (sm3_digest_init(&sm3_ctx, NULL, 0) != 1
+		|| sm3_digest_update(&sm3_ctx, (uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg)) != 1
+		|| sm3_digest_finish(&sm3_ctx, dgst) != 1) {
+		gmssl_secure_clear(&sm3_ctx, sizeof(sm3_ctx));
+		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
+		return;
+	}
+	gmssl_secure_clear(&sm3_ctx, sizeof(sm3_ctx));
 
 	RETURN_STRINGL((char *)dgst, sizeof(dgst));
 }
@@ -107,6 +114,7 @@ PHP_FUNCTION(gmssl_sm3_hmac)
 {
 	zend_string *key;
 	zend_string *msg;
+	SM3_HMAC_CTX hmac_ctx;
 	uint8_t hmac[SM3_HMAC_SIZE];
 
 	ZEND_PARSE_PARAMETERS_START(2, 2)
@@ -119,7 +127,10 @@ PHP_FUNCTION(gmssl_sm3_hmac)
 		return;
 	}
 
-	sm3_hmac((uint8_t *)ZSTR_VAL(key), ZSTR_LEN(key), (uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg), hmac);
+	sm3_hmac_init(&hmac_ctx, (uint8_t *)ZSTR_VAL(key), ZSTR_LEN(key));
+	sm3_hmac_update(&hmac_ctx, (uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg));
+	sm3_hmac_finish(&hmac_ctx, hmac);
+	gmssl_secure_clear(&hmac_ctx, sizeof(hmac_ctx));
 
 	RETURN_STRINGL((char *)hmac, sizeof(hmac));
 }
@@ -614,6 +625,67 @@ PHP_FUNCTION(gmssl_sm2_private_key_info_decrypt_from_pem)
 	RETURN_NEW_STR(ret);
 }
 
+PHP_FUNCTION(gmssl_sm2_private_key_info_to_pem)
+{
+	zend_string *keypair;
+	zend_string *file;
+	FILE *fp;
+
+	ZEND_PARSE_PARAMETERS_START(2, 2)
+		Z_PARAM_STR(keypair)
+		Z_PARAM_STR(file)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (ZSTR_LEN(keypair) != sizeof(SM2_KEY)) {
+		zend_throw_exception(zend_ce_exception, "invalid SM2 private key size", 0);
+		RETURN_FALSE;
+	}
+
+	if (!(fp = fopen(ZSTR_VAL(file), "wb"))) {
+		zend_throw_exception(zend_ce_exception, "open file error", 0);
+		RETURN_FALSE;
+	}
+
+	if (sm2_private_key_info_to_pem((SM2_KEY *)ZSTR_VAL(keypair), fp) != 1) {
+		fclose(fp);
+		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
+		RETURN_FALSE;
+	}
+	fclose(fp);
+
+	RETURN_TRUE;
+}
+
+PHP_FUNCTION(gmssl_sm2_private_key_info_from_pem)
+{
+	zend_string *ret;
+	zend_string *file;
+	FILE *fp;
+
+	ZEND_PARSE_PARAMETERS_START(1, 1)
+		Z_PARAM_STR(file)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (!(fp = fopen(ZSTR_VAL(file), "rb"))) {
+		zend_throw_exception(zend_ce_exception, "open file error", 0);
+		return;
+	}
+
+	ret = zend_string_alloc(sizeof(SM2_KEY), 0);
+
+	if (sm2_private_key_info_from_pem((SM2_KEY *)ZSTR_VAL(ret), fp) != 1) {
+		zend_string_efree(ret);
+		fclose(fp);
+		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
+		return;
+	}
+	fclose(fp);
+
+	ZSTR_VAL(ret)[sizeof(SM2_KEY)] = 0;
+
+	RETURN_NEW_STR(ret);
+}
+
 PHP_FUNCTION(gmssl_sm2_public_key_info_to_pem)
 {
 	zend_string *keypair;
@@ -715,7 +787,7 @@ PHP_FUNCTION(gmssl_sm2_sign)
 
 PHP_FUNCTION(gmssl_sm2_verify)
 {
-	SM2_SIGN_CTX sign_ctx;
+	SM2_VERIFY_CTX verify_ctx;
 	zend_string *pubkey;
 	zend_string *id;
 	zend_string *msg;
@@ -734,15 +806,15 @@ PHP_FUNCTION(gmssl_sm2_verify)
 		return;
 	}
 
-	if (sm2_verify_init(&sign_ctx, (SM2_KEY *)ZSTR_VAL(pubkey), ZSTR_VAL(id), ZSTR_LEN(id)) != 1
-		|| sm2_verify_update(&sign_ctx, (uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg)) != 1
-		|| (ret = sm2_verify_finish(&sign_ctx, (uint8_t *)ZSTR_VAL(sig), ZSTR_LEN(sig))) < 0) {
+	if (sm2_verify_init(&verify_ctx, (SM2_KEY *)ZSTR_VAL(pubkey), ZSTR_VAL(id), ZSTR_LEN(id)) != 1
+		|| sm2_verify_update(&verify_ctx, (uint8_t *)ZSTR_VAL(msg), ZSTR_LEN(msg)) != 1
+		|| (ret = sm2_verify_finish(&verify_ctx, (uint8_t *)ZSTR_VAL(sig), ZSTR_LEN(sig))) < 0) {
 
-		gmssl_secure_clear(&sign_ctx, sizeof(sign_ctx));
+		gmssl_secure_clear(&verify_ctx, sizeof(verify_ctx));
 		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
 		RETURN_FALSE;
 	}
-	gmssl_secure_clear(&sign_ctx, sizeof(sign_ctx));
+	gmssl_secure_clear(&verify_ctx, sizeof(verify_ctx));
 
 	if (ret == 1) {
 		RETURN_TRUE;
@@ -1652,18 +1724,28 @@ PHP_FUNCTION(gmssl_cert_get_subject_public_key)
 {
 	zend_string *ret;
 	zend_string *cert;
+	X509_KEY x509_key;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
 		Z_PARAM_STR(cert)
 	ZEND_PARSE_PARAMETERS_END();
 
-	ret = zend_string_alloc(sizeof(SM2_KEY), 0);
+	memset(&x509_key, 0, sizeof(x509_key));
 
-	if (x509_cert_get_subject_public_key((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), (SM2_KEY *)ZSTR_VAL(ret)) != 1) {
-		zend_string_efree(ret);
+	if (x509_cert_get_subject_public_key((uint8_t *)ZSTR_VAL(cert), ZSTR_LEN(cert), &x509_key) != 1) {
 		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);
 		return;
 	}
+
+	if (x509_key.algor != OID_ec_public_key || x509_key.algor_param != OID_sm2) {
+		x509_key_cleanup(&x509_key);
+		zend_throw_exception(zend_ce_exception, "certificate subject public key is not an SM2 key", 0);
+		return;
+	}
+
+	ret = zend_string_alloc(sizeof(SM2_KEY), 0);
+	memcpy(ZSTR_VAL(ret), &x509_key.u.sm2_key, sizeof(SM2_KEY));
+	x509_key_cleanup(&x509_key);
 
 	ZSTR_VAL(ret)[sizeof(SM2_KEY)] = 0;
 
@@ -1810,7 +1892,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(arginfo_cert_cacert_id, 0)
 	ZEND_ARG_INFO(0, cert)
 	ZEND_ARG_INFO(0, cacert)
-	ZEND_ARG_INFO(0, id)
+	ZEND_ARG_INFO(0, sm2_id)
 ZEND_END_ARG_INFO()
 
 
@@ -1831,6 +1913,8 @@ static const zend_function_entry gmssl_functions[] = {
 	PHP_FE(gmssl_sm2_compute_z,				arginfo_keypair_id)
 	PHP_FE(gmssl_sm2_private_key_info_encrypt_to_pem,	arginfo_keypair_file_pass)
 	PHP_FE(gmssl_sm2_private_key_info_decrypt_from_pem,	arginfo_file_pass)
+	PHP_FE(gmssl_sm2_private_key_info_to_pem,		arginfo_keypair_file)
+	PHP_FE(gmssl_sm2_private_key_info_from_pem,		arginfo_file)
 	PHP_FE(gmssl_sm2_public_key_info_to_pem,		arginfo_keypair_file)
 	PHP_FE(gmssl_sm2_public_key_info_from_pem,		arginfo_file)
 	PHP_FE(gmssl_sm2_sign,					arginfo_keypair_id_msg)

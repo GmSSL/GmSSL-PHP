@@ -1,7 +1,18 @@
-ARG_ENABLE('gmssl', 'gmssl support', 'no');
+ARG_WITH('gmssl', 'GmSSL support', 'no');
 
 if (PHP_GMSSL != 'no') {
-	AC_DEFINE('HAVE_GMSSL', 1, 'gmssl support enabled');
+	var gmssl_shared = PHP_GMSSL == 'shared';
+	var gmssl_dir = PHP_GMSSL;
 
-	EXTENSION('gmssl', 'gmssl.c', null, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
+	if (gmssl_shared) {
+		gmssl_dir = '';
+	}
+
+	if (CHECK_HEADER_ADD_INCLUDE('gmssl/version.h', 'CFLAGS_GMSSL', gmssl_dir + '\\include') &&
+		CHECK_LIB('gmssl.lib', 'gmssl', gmssl_dir + '\\lib')) {
+		AC_DEFINE('HAVE_GMSSL', 1, 'Have GmSSL support');
+		EXTENSION('gmssl', 'gmssl.c', gmssl_shared, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
+	} else {
+		WARNING('GmSSL headers or libraries were not found. Pass --with-gmssl=DIR or use --with-extra-includes/--with-extra-libs.');
+	}
 }
