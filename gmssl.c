@@ -153,7 +153,7 @@ PHP_FUNCTION(gmssl_sm3_pbkdf2)
 
 	out = zend_string_alloc(outlen, 0);
 
-	if (pbkdf2_hmac_sm3_genkey(ZSTR_VAL(pass), ZSTR_LEN(pass), (uint8_t *)ZSTR_VAL(salt), ZSTR_LEN(salt),
+	if (sm3_pbkdf2(ZSTR_VAL(pass), ZSTR_LEN(pass), (uint8_t *)ZSTR_VAL(salt), ZSTR_LEN(salt),
 		iter, outlen, (uint8_t *)ZSTR_VAL(out)) != 1) {
 		zend_string_efree(out);
 		zend_throw_exception(zend_ce_exception, "libgmssl inner error", 0);

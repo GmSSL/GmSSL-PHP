@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  GMSSL_VERSION: 3.1.1
+  GMSSL_VERSION: 3.2.0
 
 jobs:
   unix:
