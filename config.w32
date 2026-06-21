@@ -5,7 +5,17 @@ if (PHP_GMSSL != 'no') {
 	var gmssl_dir = PHP_GMSSL;
 
 	if (gmssl_shared) {
-		gmssl_dir = '';
+		gmssl_dir = getenv('GMSSL_PREFIX');
+		if (!gmssl_dir) {
+			gmssl_dir = getenv('GMSSL_DIR');
+		}
+	}
+
+	if (gmssl_dir == 'yes') {
+		gmssl_dir = getenv('GMSSL_PREFIX');
+		if (!gmssl_dir) {
+			gmssl_dir = getenv('GMSSL_DIR');
+		}
 	}
 
 	if (CHECK_HEADER_ADD_INCLUDE('gmssl/version.h', 'CFLAGS_GMSSL', gmssl_dir + '\\include') &&
@@ -13,6 +23,6 @@ if (PHP_GMSSL != 'no') {
 		AC_DEFINE('HAVE_GMSSL', 1, 'Have GmSSL support');
 		EXTENSION('gmssl', 'gmssl.c', gmssl_shared, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
 	} else {
-		WARNING('GmSSL headers or libraries were not found. Pass --with-gmssl=DIR or use --with-extra-includes/--with-extra-libs.');
+		ERROR('GmSSL headers or libraries were not found. Set GMSSL_PREFIX or pass --with-gmssl=DIR.');
 	}
 }
