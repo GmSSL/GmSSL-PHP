@@ -111,6 +111,9 @@ jobs:
         shell: pwsh
         run: |
           git clone --depth 1 --branch "v$env:GMSSL_VERSION" https://github.com/guanzhi/GmSSL.git "$env:RUNNER_TEMP\GmSSL"
+          (Get-Content "$env:RUNNER_TEMP\GmSSL\CMakeLists.txt") `
+            -replace 'set\(CMAKE_INSTALL_PREFIX "C:/Program Files/GmSSL"\)', '# Removed by CI: use the configured CMAKE_INSTALL_PREFIX' |
+            Set-Content "$env:RUNNER_TEMP\GmSSL\CMakeLists.txt"
           cmake -S "$env:RUNNER_TEMP\GmSSL" -B "$env:RUNNER_TEMP\GmSSL\build" -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$env:GMSSL_PREFIX"
           cmake --build "$env:RUNNER_TEMP\GmSSL\build"
           cmake --install "$env:RUNNER_TEMP\GmSSL\build"
@@ -119,8 +122,8 @@ jobs:
         shell: cmd
         working-directory: C:\php-build
         run: |
-          buildconf.bat --force
-          configure.bat --disable-all --enable-cli --with-gmssl=shared --with-extra-includes=%GMSSL_PREFIX%/include --with-extra-libs=%GMSSL_PREFIX%/lib
+          call buildconf.bat --force
+          call configure.bat --disable-all --enable-cli --with-gmssl=shared --with-extra-includes=%GMSSL_PREFIX%/include --with-extra-libs=%GMSSL_PREFIX%/lib
           nmake
 
       - name: Smoke test extension
